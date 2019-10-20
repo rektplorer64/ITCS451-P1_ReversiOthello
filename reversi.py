@@ -21,6 +21,7 @@ def clear_screen():
         subprocess.call('cls', shell=True)
     else:
         subprocess.call('clear', shell=True)
+    # pass
 
 
 def render(board, turn, prev_move=None, prev_turn=None):
@@ -60,7 +61,8 @@ async def main(black, white, timelimit=2):
         else:
             start_time = time.time()
             try:
-                agent_task = asyncio.create_task(black.move(board, valids))
+                agent_task = asyncio.create_task(
+                    active_player.move(board, valids))
                 time_task = asyncio.create_task(timer(timelimit))
                 done, pending = await asyncio.wait(
                     {time_task, agent_task},
@@ -71,8 +73,7 @@ async def main(black, white, timelimit=2):
             except asyncio.TimeoutError:
                 d = time.time() - start_time - timelimit
                 print(f'Timeout! Overtime: {d:.2}')
-            finally:
-                move = black.best_move
+            move = active_player.best_move
         clear_screen()
         prev_turn = turn
         board, turn = env.get_next_state((board, turn), move)
@@ -90,6 +91,7 @@ async def main(black, white, timelimit=2):
 
 
 if __name__ == "__main__":
-    black = agents.RandomAgent(bg2.BLACK)
+    # black = agents.RandomAgent(bg2.BLACK)
+    black = agents.MyAgent(bg2.BLACK)
     white = agents.RandomAgent(bg2.WHITE)
     asyncio.run(main(black, white, 10))
