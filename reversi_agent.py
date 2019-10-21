@@ -107,7 +107,7 @@ class RandomAgent(ReversiAgent):
         """Set the intended move to self._move."""
         # If you want to "simulate a move", you can call the following function:
         # transition(board, self.player, valid_actions[0])
-        print("\nRandom Agent Possible Actions: " + str(valid_actions))
+        # print("\nRandom Agent Possible Actions: " + str(valid_actions))
         await asyncio.sleep(2.0)
         randidx = random.randint(0, len(valid_actions) - 1)
         self._move = valid_actions[randidx]
@@ -115,8 +115,12 @@ class RandomAgent(ReversiAgent):
 
 class MyAgent(ReversiAgent):
 
+    def __index__(self):
+        super(MyAgent, self)
+        # self.transpositionTable = set()
+
     async def search(self, board, valid_actions: np.array):
-        evaluation, bestAction = self.minimax(board, valid_actions, 6, 0, - sys.maxsize - 1, sys.maxsize, True)
+        evaluation, bestAction = self.minimax(board, valid_actions, 5, 0, - sys.maxsize - 1, sys.maxsize, True)
 
         # self.createState(board, valid_actions, self._color)
 
@@ -177,12 +181,17 @@ class MyAgent(ReversiAgent):
                 return minEval, bestAction
 
     def evaluateStatistically(self, board: np.array) -> int:
-        count = 0
-        for row in board:
-            for col in row:
-                if col == self._color:
-                    count += 1
-        return count
+        countA = 0
+        countB = 0
+        evalBoard = np.array(list(zip(*board.nonzero())))
+
+        # print("Print Board: " + str(evalBoard))
+        for row in evalBoard:
+            if board[row[0]][row[1]] == self._color:
+                countA += 1
+            else:
+                countB += 1
+        return countA - countB
 
     @staticmethod
     def getOpponent(player: int):
