@@ -157,7 +157,7 @@ class MyAgent(ReversiAgent):
 
     def search(self, color, board, valid_actions, output_move_row, output_move_column):
         if self._color == 1:
-            evaluation, bestAction = self.minimax(board, valid_actions, 3, 0, - sys.maxsize - 1, sys.maxsize, True)
+            evaluation, bestAction = self.minimax(board, valid_actions, 4, 0, - sys.maxsize - 1, sys.maxsize, True)
         else:
             evaluation, bestAction = self.minimax(board, valid_actions, 2, 0, - sys.maxsize - 1, sys.maxsize, True)
         # self.createState(board, valid_actions, self._color)
