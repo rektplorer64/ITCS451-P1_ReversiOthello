@@ -120,9 +120,11 @@ class MyAgent(ReversiAgent):
         # self.transpositionTable = set()
 
     async def search(self, board, valid_actions: np.array):
-        evaluation, bestAction = self.minimax(board, valid_actions, 5, 0, - sys.maxsize - 1, sys.maxsize, True)
-
-        # self.createState(board, valid_actions, self._color)
+        if self._color == 1:
+            evaluation, bestAction = self.minimax(board, valid_actions, 3, 0, - sys.maxsize - 1, sys.maxsize, True)
+        else:
+            evaluation, bestAction = self.minimax(board, valid_actions, 2, 0, - sys.maxsize - 1, sys.maxsize, True)
+# self.createState(board, valid_actions, self._color)
 
         print("Me Selected: " + str(bestAction))
         self._move = bestAction
@@ -132,16 +134,16 @@ class MyAgent(ReversiAgent):
         if depth == 0:
             return self.evaluateStatistically(board)
 
-        bestAction = None
+        bestAction: np.array = None
         if maximizingPlayer:
-            mAlpha = alpha
+            mAlpha: int = alpha
             maxEval: int = - sys.maxsize - 1
-            player = self._color
+            player: int = self._color
 
             for action in validActions:
-                # TODO: transition function does not return new actions! lol.
                 newState, newValidActions = self.createState(board, action, player)
-                evaluation = self.minimax(newState, newValidActions, depth - 1, levelCount + 1, mAlpha, beta, not maximizingPlayer)
+                evaluation = self.minimax(newState, newValidActions
+                                          , depth - 1, levelCount + 1, mAlpha, beta, not maximizingPlayer)
 
                 if maxEval < evaluation:
                     maxEval = evaluation
@@ -157,14 +159,14 @@ class MyAgent(ReversiAgent):
             else:
                 return maxEval, bestAction
         else:
-            mBeta = beta
+            mBeta: int = beta
             minEval: int = sys.maxsize
-            player = self.getOpponent(self._color)
+            player: int = self.getOpponent(self._color)
 
             for action in validActions:
-                # TODO: transition function does not return new actions! lol.
                 newState, newValidActions = self.createState(board, action, player)
-                evaluation = self.minimax(newState, newValidActions, depth - 1, levelCount + 1, alpha, mBeta, not maximizingPlayer)
+                evaluation = self.minimax(newState, newValidActions
+                                          , depth - 1, levelCount + 1, alpha, mBeta, not maximizingPlayer)
 
                 if minEval > evaluation:
                     minEval = evaluation
@@ -181,8 +183,8 @@ class MyAgent(ReversiAgent):
                 return minEval, bestAction
 
     def evaluateStatistically(self, board: np.array) -> int:
-        countA = 0
-        countB = 0
+        countA: int = 0
+        countB: int = 0
         evalBoard = np.array(list(zip(*board.nonzero())))
 
         # print("Print Board: " + str(evalBoard))
@@ -200,12 +202,10 @@ class MyAgent(ReversiAgent):
         else:
             return 1
 
-    def createState(self, board, action, player: int) -> (np.array, np.array):
-        newState = transition(board, player, action)
+    def createState(self, board: np.array, action: np.array, player: int) -> (np.array, np.array):
+        newState: np.array = transition(board, player, action)
 
-        validMoves = _ENV.get_valid((newState, self.getOpponent(player)))
-        # print("Valid Moves: " + str(validMoves))
-
-        validMoves = np.array(list(zip(*validMoves.nonzero())))
+        validMoves: np.array = _ENV.get_valid((newState, self.getOpponent(player)))
+        validMoves: np.array = np.array(list(zip(*validMoves.nonzero())))
 
         return newState, validMoves
