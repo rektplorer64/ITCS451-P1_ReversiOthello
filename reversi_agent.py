@@ -2,10 +2,11 @@
 
 import abc
 import asyncio
-import copy
 import random
 import sys
+import time
 import traceback
+from multiprocessing import Process, Value
 
 import gym
 import numpy as np
@@ -66,17 +67,37 @@ class ReversiAgent(abc.ABC):
             return self.pass_move
 
     async def move(self, board, valid_actions):
-        """Return a move. The returned is also available at self._move."""
+        """Return a move. The returned is also availabel at self._move."""
         self._move = None
+        output_move_row = Value('d', -1)
+        output_move_column = Value('d', 0)
         try:
-            await self.search(board, valid_actions)
+            # await self.search(board, valid_actions)
+            p = Process(
+                target=self.search,
+                args=(
+                    self._color, board, valid_actions,
+                    output_move_row, output_move_column))
+            p.start()
+            while p.is_alive():
+                await asyncio.sleep(0.1)
+        except asyncio.CancelledError as e:
+            print('The previous player is interrupted by a user or a timer.')
         except Exception as e:
+            print(type(e).__name__)
+            print('move() Traceback (most recent call last): ')
             traceback.print_tb(e.__traceback__)
-            print(e)
+        finally:
+            p.kill()
+            self._move = np.array(
+                [output_move_row.value, output_move_column.value],
+                dtype=np.int32)
         return self.best_move
 
     @abc.abstractmethod
-    async def search(self, board, valid_actions):
+    def search(
+            self, color, board, valid_actions,
+            output_move_row, output_move_column):
         """
         Set the intended move to self._move.
 
@@ -94,7 +115,9 @@ class ReversiAgent(abc.ABC):
         Returns
         -------------------
         None
-            This method should set self._move as a way to return.
+            This method should set value for
+            `output_move_row.value` and `output_move_column.value`
+            as a way to return.
 
         """
         raise NotImplementedError('You will have to implement this.')
@@ -103,14 +126,27 @@ class ReversiAgent(abc.ABC):
 class RandomAgent(ReversiAgent):
     """An agent that move randomly."""
 
-    async def search(self, board, valid_actions):
-        """Set the intended move to self._move."""
+    def search(
+            self, color, board, valid_actions,
+            output_move_row, output_move_column):
+        """Set the intended move to the value of output_moves."""
         # If you want to "simulate a move", you can call the following function:
         # transition(board, self.player, valid_actions[0])
-        # print("\nRandom Agent Possible Actions: " + str(valid_actions))
-        await asyncio.sleep(2.0)
-        randidx = random.randint(0, len(valid_actions) - 1)
-        self._move = valid_actions[randidx]
+
+        # To prevent your agent to fail silently we should an
+        # explicit trackback printout.
+        try:
+            # while True:
+            #     pass
+            time.sleep(3)
+            randidx = random.randint(0, len(valid_actions) - 1)
+            random_action = valid_actions[randidx]
+            output_move_row.value = random_action[0]
+            output_move_column.value = random_action[1]
+        except Exception as e:
+            print(type(e).__name__, ':', e)
+            print('search() Traceback (most recent call last): ')
+            traceback.print_tb(e.__traceback__)
 
 
 class MyAgent(ReversiAgent):
@@ -119,15 +155,16 @@ class MyAgent(ReversiAgent):
         super(MyAgent, self)
         # self.transpositionTable = set()
 
-    async def search(self, board, valid_actions: np.array):
+    def search(self, color, board, valid_actions, output_move_row, output_move_column):
         if self._color == 1:
             evaluation, bestAction = self.minimax(board, valid_actions, 3, 0, - sys.maxsize - 1, sys.maxsize, True)
         else:
             evaluation, bestAction = self.minimax(board, valid_actions, 2, 0, - sys.maxsize - 1, sys.maxsize, True)
-# self.createState(board, valid_actions, self._color)
+        # self.createState(board, valid_actions, self._color)
 
         print("Me Selected: " + str(bestAction))
-        self._move = bestAction
+        output_move_row.value = bestAction[0]
+        output_move_column.value = bestAction[1]
 
     def minimax(self, board: np.array, validActions: np.array, depth: int, levelCount: int, alpha: int, beta: int,
                 maximizingPlayer: bool):

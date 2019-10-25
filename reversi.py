@@ -1,4 +1,8 @@
-"""This module is a reversi engine for the AI."""
+"""
+This module is a reversi engine for the AI.
+
+Version 3.0
+"""
 
 import os
 from tqdm import tqdm
@@ -14,7 +18,6 @@ import reversi_agent as agents
 
 _name = {bg2.BLACK: 'BLACK', bg2.WHITE: 'WHITE'}
 
-
 def clear_screen():
     """Clear the shell."""
     if os.name == 'nt':
@@ -22,7 +25,6 @@ def clear_screen():
     else:
         subprocess.call('clear', shell=True)
     # pass
-
 
 def render(board, turn, prev_move=None, prev_turn=None):
     """Render on the screen."""
@@ -32,15 +34,12 @@ def render(board, turn, prev_move=None, prev_turn=None):
     print(board)
     black_score = np.sum(board == bg2.BLACK)
     white_score = np.sum(board == bg2.WHITE)
-    print(f'BLACK : {black_score}  -  {white_score} : WHITE')
-    print(f'{_name[turn]}\'s turn')
-
+    print(f'  BLACK : {black_score}  -  {white_score} : WHITE')
 
 async def timer(limit):
     """Create a progress bar for timer."""
-    for i in tqdm(range(limit * 10), desc="Time Limit: "):
-        await asyncio.sleep(1 / 10)
-
+    for i in tqdm(range(limit*10), desc="Time Limit: "):
+        await asyncio.sleep(1/10)
 
 async def main(black, white, timelimit=2):
     """Run the game."""
@@ -54,6 +53,7 @@ async def main(black, white, timelimit=2):
         active_player = black
         if turn == white.player:
             active_player = white
+        print(f'{_name[turn]}\'s turn')
         if len(valids) == 0:
             print('NO MOVE! SKIP PLAYER TURN.')
             await asyncio.sleep(3)
@@ -73,6 +73,7 @@ async def main(black, white, timelimit=2):
             except asyncio.TimeoutError:
                 d = time.time() - start_time - timelimit
                 print(f'Timeout! Overtime: {d:.2}')
+                break
             move = active_player.best_move
         clear_screen()
         prev_turn = turn
@@ -80,7 +81,7 @@ async def main(black, white, timelimit=2):
         render(board, turn, move, prev_turn)
         winner = env.get_winner((board, turn))
         if winner is not None:
-            print('=' * 40)
+            print('='*40)
             if winner == bg2.BLACK:
                 print('BLACK wins!')
             elif winner == bg2.WHITE:
@@ -91,8 +92,6 @@ async def main(black, white, timelimit=2):
 
 
 if __name__ == "__main__":
-    # black = agents.RandomAgent(bg2.BLACK)
-    black = agents.MyAgent(bg2.BLACK)
-    # white = agents.MyAgent(bg2.WHITE)
+    black = agents.RandomAgent(bg2.BLACK)
     white = agents.RandomAgent(bg2.WHITE)
     asyncio.run(main(black, white, 10))
