@@ -149,38 +149,82 @@ class RandomAgent(ReversiAgent):
             traceback.print_tb(e.__traceback__)
 
 
-class MyAgent(ReversiAgent):
+class AgentMongChaChaVI(ReversiAgent):
+    """An agent that evaluates each action using trained weights"""
 
-    def __index__(self):
-        super(MyAgent, self)
-        # self.transpositionTable = set()
+    def __init__(self, color: int):
+        """
+        Initialize the weight matrix
+
+        :param color: color of the current agent. It can be only either BLACK or WHITE
+        """
+        super().__init__(color)
+        weights = (80, -26, 24, -1, -5, 28, -18, 76,
+                   -23, -39, -18, -9, -6, -8, -39, -1,
+                   46, -16, 4, 1, -3, 6, -20, 52,
+                   -13, -5, 2, -1, 4, 3, -12, -2,
+                   -5, -6, 1, -2, -3, 0, -9, -5,
+                   48, -13, 12, 5, 0, 5, -24, 41,
+                   -27, -53, -11, -1, -11, -16, -58, -15,
+                   87, -25, 27, -1, 5, 36, -3, 100)
+        self.trainedWeights = np.array(weights).reshape(8, 8)
+        # print(self.trainedWeights)
 
     def search(self, color, board, valid_actions, output_move_row, output_move_column):
+        """
+        Begins searching for a round of the game
+
+        :param color:               the color of the current player.
+        :param board:               the state of the board
+        :param valid_actions:       the executable actions for the current player
+        :param output_move_row:     the variable to store the outcome of searching in ROW manner
+        :param output_move_column:  the variable to store the outcome of searching in ROW manner
+
+        :return:                    nothing
+        """
+
+        # Hard-coded statements for testing against the same type of agent
         if self._color == 1:
-            evaluation, bestAction = self.minimax(board, valid_actions, 4, 0, - sys.maxsize - 1, sys.maxsize, True)
+            evaluation, bestAction = self.minimax(board, valid_actions, 4, 0, -99999, 99999, True)
         else:
-            evaluation, bestAction = self.minimax(board, valid_actions, 2, 0, - sys.maxsize - 1, sys.maxsize, True)
-        # self.createState(board, valid_actions, self._color)
+            evaluation, bestAction = self.minimax(board, valid_actions, 4, 0, -99999, 99999, True)
 
         print("Me Selected: " + str(bestAction))
-        output_move_row.value = bestAction[0]
-        output_move_column.value = bestAction[1]
+
+        # Stupid error messages avoidance
+        if bestAction is not None:
+            output_move_row.value = bestAction[0]
+            output_move_column.value = bestAction[1]
 
     def minimax(self, board: np.array, validActions: np.array, depth: int, levelCount: int, alpha: int, beta: int,
                 maximizingPlayer: bool):
+        """
+        Recursively find the optimal action based on the current observation.
+        The algorithm is Minimax with Alpha-Beta pruning
+
+        :param board:               the state of the board
+        :param validActions:        executable actions for the current player
+        :param depth:               depth limit for recursive Minimax
+        :param levelCount:          depth counter
+        :param alpha:               alpha value for pruning the Search tree
+        :param beta:                beta value for pruning the Search tree
+        :param maximizingPlayer:    determine whether the current Minimax node is a Maximizing node or not
+
+        :return:                    At levelCount == 0: returns eval and bestAction; otherwise, returns only eval.
+        """
         if depth == 0:
             return self.evaluateStatistically(board)
 
         bestAction: np.array = None
         if maximizingPlayer:
             mAlpha: int = alpha
-            maxEval: int = - sys.maxsize - 1
+            maxEval: int = -99999
             player: int = self._color
 
             for action in validActions:
                 newState, newValidActions = self.createState(board, action, player)
-                evaluation = self.minimax(newState, newValidActions
-                                          , depth - 1, levelCount + 1, mAlpha, beta, not maximizingPlayer)
+                evaluation = self.minimax(newState, newValidActions,
+                                          depth - 1, levelCount + 1, mAlpha, beta, not maximizingPlayer)
 
                 if maxEval < evaluation:
                     maxEval = evaluation
@@ -197,13 +241,13 @@ class MyAgent(ReversiAgent):
                 return maxEval, bestAction
         else:
             mBeta: int = beta
-            minEval: int = sys.maxsize
+            minEval: int = 99999
             player: int = self.getOpponent(self._color)
 
             for action in validActions:
                 newState, newValidActions = self.createState(board, action, player)
-                evaluation = self.minimax(newState, newValidActions
-                                          , depth - 1, levelCount + 1, alpha, mBeta, not maximizingPlayer)
+                evaluation = self.minimax(newState, newValidActions,
+                                          depth - 1, levelCount + 1, alpha, mBeta, not maximizingPlayer)
 
                 if minEval > evaluation:
                     minEval = evaluation
@@ -220,29 +264,87 @@ class MyAgent(ReversiAgent):
                 return minEval, bestAction
 
     def evaluateStatistically(self, board: np.array) -> int:
-        countA: int = 0
-        countB: int = 0
-        evalBoard = np.array(list(zip(*board.nonzero())))
+        """
+        Calculates the Evaluation at the depth limit
 
-        # print("Print Board: " + str(evalBoard))
-        for row in evalBoard:
-            if board[row[0]][row[1]] == self._color:
-                countA += 1
+        :param board:   current state of the board
+
+        :return:        evaluation value
+        """
+
+        nonZeroPositions = np.array(list(zip(*board.nonzero())))
+
+        myEvaluationScore = 0
+        opponentEvaluationScore = 0
+
+        for position in nonZeroPositions:
+            positionY, positionX = position[0], position[1]
+
+            # If the current position has a piece of this Agent
+            if board[positionY][positionX] == self._color:
+                # Get the weight from hard-coded matrix
+                myEvaluationScore += self.trainedWeights[positionY][positionX]
             else:
-                countB += 1
-        return countA - countB
+                opponentEvaluationScore += self.trainedWeights[positionY][positionX]
+
+        # The differences between this Agent and its opponent.
+        return myEvaluationScore - opponentEvaluationScore
 
     @staticmethod
     def getOpponent(player: int):
+        """
+        Returns the opponent player identifier
+
+        :param player:      a player
+
+        :return:            the opponent of that player
+        """
         if player == 1:
             return -1
         else:
             return 1
 
     def createState(self, board: np.array, action: np.array, player: int) -> (np.array, np.array):
+        """
+        Creates a new state and new actions based on given a state and an action.
+
+        :param board:       a state of the board
+        :param action:      an action
+        :param player:      a player that performs the action
+
+        :return:            a new state and a set of new possible actions
+        """
         newState: np.array = transition(board, player, action)
 
         validMoves: np.array = _ENV.get_valid((newState, self.getOpponent(player)))
         validMoves: np.array = np.array(list(zip(*validMoves.nonzero())))
 
         return newState, validMoves
+
+
+class StupidCountingAgent(AgentMongChaChaVI):
+
+    def __init__(self, color):
+        super().__init__(color)
+
+        # self.transpositionTable = set()
+
+    def evaluateStatistically(self, board: np.array) -> int:
+        """
+        Stupidly counts all pieces on the board
+        :param board:       a state of the board
+        :return:            the difference between both players in terms of piece counts
+        """
+        countA: int = 0
+        countB: int = 0
+
+        # Eliminates all ZEROES in the board and return NON-ZERO as a position (Row, Col)
+        nonZeroPositions = np.array(list(zip(*board.nonzero())))
+
+        # print("Print Board: " + str(nonZeroPositions))
+        for position in nonZeroPositions:
+            if board[position[0]][position[1]] == self._color:
+                countA += 1
+            else:
+                countB += 1
+        return countA - countB
